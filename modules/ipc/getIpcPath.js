@@ -14,7 +14,7 @@ module.exports = function() {
     if(process.platform === 'freebsd' ||
        process.platform === 'linux' ||
        process.platform === 'sunos')
-        path += '.expanse/gexp.ipc';
+        path += '/.expanse/gexp.ipc';
 
     if(process.platform === 'win32')
         path = '\\\\.\\pipe\\gexp.ipc';

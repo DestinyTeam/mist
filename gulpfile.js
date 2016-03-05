@@ -80,9 +80,9 @@ gulp.task('set-variables-mist', function () {
 });
 gulp.task('set-variables-wallet', function () {
     type = 'wallet';
-    filenameLowercase = 'ethereum-wallet';
-    filenameUppercase = 'Ethereum-Wallet';
-    applicationName = 'Ξthereum Wallet';
+    filenameLowercase = 'expanse-wallet';
+    filenameUppercase = 'Expanse-Wallet';
+    applicationName = 'Expanse & Destiny Wallet';
 });
 
 
