@@ -28,7 +28,7 @@ else
 
 
 // CONFIG
-var type = 'mist';
+var type = 'wallet';
 var filenameLowercase = 'mist';
 var filenameUppercase = 'Mist';
 var applicationName = 'Mist'; 
