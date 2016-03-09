@@ -59,7 +59,7 @@ if(global.mode === 'wallet') {
         ? 'file://' + __dirname + '/interface/wallet/index.html'
         : 'http://localhost:3050';
     global.interfacePopupsUrl = (global.production)
-        ? 'file://' + __dirname + '/interface/index.html'
+        ? 'file://' + __dirname + '/interface/wallet/index.html'
         : 'http://localhost:3000';
 
 // MIST
