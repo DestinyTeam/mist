@@ -52,6 +52,7 @@ global.nodeConnector = new NodeConnector(ipcPath);
 // INTERFACE PATHS
 global.interfaceAppUrl;
 global.interfacePopupsUrl;
+global.interfaceAppStartUrl;
 
 // WALLET
 if(global.mode === 'wallet') {
@@ -59,12 +60,16 @@ if(global.mode === 'wallet') {
         ? 'file://' + __dirname + '/interface/wallet/index.html'
         : 'http://localhost:3050';
     global.interfacePopupsUrl = (global.production)
-        ? 'file://' + __dirname + '/interface/wallet/index.html'
+        ? 'file://' + __dirname + '/interface/wallet/popup.html'
+        : 'http://localhost:3000';
+    global.interfaceAppStartUrl = (global.production)
+        ? 'file://' + __dirname + '/interface/index.html'
         : 'http://localhost:3000';
 
 // MIST
 } else {
-    global.interfaceAppUrl = global.interfacePopupsUrl = (global.production)
+    global.interfaceAppStartUrl = global.interfaceAppUrl = 
+    global.interfacePopupsUrl = (global.production)
         ? 'file://' + __dirname + '/interface/index.html'
         : 'http://localhost:3000';
 }
@@ -251,7 +256,7 @@ app.on('ready', function() {
                 webSecurity: false // necessary to make routing work on file:// protocol
             }
         });
-    appStartWindow.loadURL(global.interfacePopupsUrl + '#splashScreen_'+ global.mode);//'file://' + __dirname + '/interface/startScreen/'+ global.mode +'.html');
+    appStartWindow.loadURL(global.interfaceAppStartUrl + '#splashScreen_'+ global.mode);//'file://' + __dirname + '/interface/startScreen/'+ global.mode +'.html');
 
 
     appStartWindow.webContents.on('did-finish-load', function() {
