@@ -366,20 +366,24 @@ module.exports = function(){
                 return callback(null, filteredPayload);
         }
 
+        console.log("filteredPayload.method ", filteredPayload.method, filteredPayload, event);
 
         // confirm SEND TRANSACTION
         if(filteredPayload.method === 'eth_sendTransaction') {
 
-            var modalWindow = popupWindow.show('sendTransactionConfirmation', {width: 580, height: 550, alwaysOnTop: true}, filteredPayload.params[0]);
+            /*var modalWindow = popupWindow.show('sendTransactionConfirmation', {width: 580, height: 550, alwaysOnTop: true}, filteredPayload.params[0]);
             modalWindow.on('closed', function() {
                 if(!called) {
                     callback(errorUnlock);
                     called = true;
                 }
-            });
-
+            });*/
+                    //called = true;
+            console.log("filteredPayload ", filteredPayload.params[0], filteredPayload.params);
             ipc.once('backendAction_unlockedAccount', function(ev, err, result){
-                if(modalWindow.webContents && ev.sender.getId() === modalWindow.webContents.getId()) {
+                console.log("'backendAction_unlockedAccount'", ev, err, result);
+                if(true)//(modalWindow.webContents && ev.sender.getId() === modalWindow.webContents.getId())
+                   {
                     if(err || !result) {
                         console.log('Confirmation error:', err);
 
@@ -399,8 +403,8 @@ module.exports = function(){
                     }
 
                     called = true;
-                    modalWindow.close();
-                    modalWindow = null;
+                    //modalWindow.close();
+                    //modalWindow = null;
                 }
             });
 
