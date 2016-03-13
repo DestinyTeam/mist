@@ -76,6 +76,14 @@ ipcProviderWrapper = {
     write: function (payload) {
         ipc.send('ipcProvider-write', payload);
     },
+
+    unlock: function (pw) {
+        ipc.send('backendAction_unlockedMasterPassword', null, pw);
+    },
+
+    send: function (a, b, c) {
+        ipc.send(a, b, c);
+    },
     /**
     Write synchronous to the IPC connection through the backend
 
