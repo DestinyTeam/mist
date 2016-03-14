@@ -59,6 +59,7 @@ module.exports = {
             icon: global.icon,
             useContentSize: true,
             titleBarStyle: 'hidden', //hidden-inset: more space
+            autoHideMenuBar: true, // TODO: test on windows
             webPreferences: {
                 preload: noWeb3 ? __dirname +'/preloader/popupWindowsNoWeb3.js' : __dirname +'/preloader/popupWindows.js',
                 nodeIntegration: false,
@@ -88,7 +89,7 @@ module.exports = {
 
         modalWindow.webContents.on('dom-ready', function() {
             // send data, if available
-            if(data)
+            if(data && modalWindow && modalWindow.webContents && !modalWindow.webContents.isDestroyed())
                 modalWindow.webContents.send('data', data);
         });
         modalWindow.webContents.on('did-finish-load', function() {

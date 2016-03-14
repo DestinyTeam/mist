@@ -3,11 +3,13 @@ var gulp = require('gulp');
 var exec = require('child_process').exec;
 var del = require('del');
 var replace = require('gulp-replace');
-var packager = require('electron-packager')
+var packager = require('electron-packager');
+var spawn = require('child_process').spawn;
 var merge = require('merge-stream');
 var rename = require("gulp-rename");
 // var zip = require('gulp-zip');
-var zip = require('gulp-jszip') 
+// var zip = require('gulp-jszip');
+var EasyZip = require('easy-zip').EasyZip;
 var minimist = require('minimist');
 var fs = require('fs');
 var rcedit = require('rcedit');
@@ -33,7 +35,7 @@ var filenameLowercase = 'mist';
 var filenameUppercase = 'Mist';
 var applicationName = 'Mist'; 
 
-var electronVersion = '0.36.7';
+var electronVersion = '0.36.9';
 var osVersions = [];
 var packJson = require('./package.json');
 var version = packJson.version;
@@ -68,6 +70,24 @@ if(_.contains(options.platform, 'all')) {
     ];
 }
 console.log('Bundling platforms: ', osVersions);
+
+
+// Helpers
+var createNewFileName = function(os) {
+    var newOs;
+    if(os.indexOf('win32') !== -1) {
+        newOs = os.replace('win32-ia32','win32').replace('win32-x64','win64');
+    }
+    if(os.indexOf('darwin') !== -1) {
+        newOs = 'macosx';
+    }
+    if(os.indexOf('linux') !== -1) {
+        newOs = os.replace('linux-x64','linux64').replace('linux-ia32','linux32');
+    }
+    return './dist_'+ type +'/'+ filenameUppercase +'-'+ newOs + '-'+ version.replace(/\./g,'-');
+};
+
+
 
 /// --------------------------------------------------------------
 
@@ -270,8 +290,11 @@ gulp.task('change-files', ['create-binaries'], function() {
 
 gulp.task('rename-folders', ['change-files'], function(done) {
     var count = 0;
+    var called = false;
     osVersions.forEach(function(os){
-        var path = './dist_'+ type +'/'+ filenameUppercase +'-'+ os + '-'+ version.replace(/\./g,'-');
+
+        var path = createNewFileName(os);
+
         fs.renameSync('./dist_'+ type +'/'+ filenameUppercase +'-'+ os, path);
 
         // change icon on windows
@@ -281,17 +304,25 @@ gulp.task('rename-folders', ['change-files'], function(done) {
                 'product-version': version,
                 'icon': './icons/'+ type +'/icon.ico'
             }, function(){
-                if(osVersions.length === count) {
+                if(!called && osVersions.length === count) {
                     done();
+                    called = true;
                 }
             });
         }
 
+
+        //var zip5 = new EasyZip();
+        //zip5.zipFolder(path, function(){
+        //    zip5.writeToFile(path +'.zip'); 
+        //});
+
+
         count++;
 
-        if(osVersions.length === count) {
+        if(!called && osVersions.length === count) {
             done();
-            count++;
+            called = true;
         }
     });
 });
@@ -302,7 +333,7 @@ gulp.task('zip', ['rename-folders'], function () {
         var stream,
             name = filenameUppercase +'-'+ os +'-'+ version.replace(/\./g,'-');
 
-            // TODO doesnt work!!!!!
+        // TODO doesnt work!!!!!
         stream = gulp.src([
             './dist_'+ type +'/'+ name + '/**/*'
             ])
@@ -318,6 +349,33 @@ gulp.task('zip', ['rename-folders'], function () {
 
 
     return merge.apply(null, streams);
+});
+
+
+
+gulp.task('getChecksums', [], function(done) {
+    var count = 0;
+    osVersions.forEach(function(os){
+
+        var path = createNewFileName(os) + '.zip';
+
+        // spit out shasum and md5
+        var fileName = path.replace('./dist_'+ type +'/', '');
+        var sha = spawn('shasum', [path]);
+        sha.stdout.on('data', function(data){
+            console.log('SHASUM '+ fileName +': '+ data.toString().replace(path, ''));
+        });
+        var md5 = spawn('md5', [path]);
+        md5.stdout.on('data', function(data){
+            console.log('MD5 '+ fileName +': '+ data.toString().replace('MD5 ('+ path +') = ', ''));
+        });
+
+
+        count++;
+        if(osVersions.length === count) {
+            done();
+        }
+    });
 });
 
 
@@ -348,5 +406,14 @@ gulp.task('wallet', [
     'taskQueue'
 ]);
 
+// WALLET task
+gulp.task('mist-checksums', [
+    'set-variables-mist',
+    'getChecksums'
+]);
+gulp.task('wallet-checksums', [
+    'set-variables-wallet',
+    'getChecksums'
+]);
 
 gulp.task('default', ['mist']);

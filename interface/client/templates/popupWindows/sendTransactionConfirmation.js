@@ -97,6 +97,17 @@ Template['popupWindows_sendTransactionConfirmation'].onRendered(function(){
 
 Template['popupWindows_sendTransactionConfirmation'].helpers({
     /**
+    Returns the total amount
+
+    @method (totalAmount)
+    */
+    'totalAmount': function(){
+        var amount = EthTools.formatBalance(this.value, '0,0.00[0000000000000000]', 'ether');
+        var dotPos = (~amount.indexOf('.')) ? amount.indexOf('.') + 3 : amount.indexOf(',') + 3;
+
+        return amount ? amount.substr(0, dotPos) + '<small style="font-size: 0.5em;">'+ amount.substr(dotPos) +'</small>' : '0';
+    },
+    /**
     Calculates the fee used for this transaction in ether
 
     @method (estimatedFee)
@@ -200,13 +211,18 @@ Template['popupWindows_sendTransactionConfirmation'].events({
                     template.$('input[type="password"]').focus();
                 });
 
-                GlobalNotification.warning({
-                    content: TAPi18n.__('mist.popupWindows.sendTransactionConfirmation.errors.wrongPassword'),
-                    duration: 3
-                });
+                if(e.message.indexOf('CONNECTION ERROR') !== -1) {
+                    GlobalNotification.warning({
+                        content: TAPi18n.__('mist.popupWindows.sendTransactionConfirmation.errors.connectionTimeout'),
+                        duration: 3
+                    });
+                } else {
+                    GlobalNotification.warning({
+                        content: TAPi18n.__('mist.popupWindows.sendTransactionConfirmation.errors.wrongPassword'),
+                        duration: 3
+                    });
+                }
             }
-
         });
-
    } 
 });

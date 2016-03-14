@@ -1,6 +1,6 @@
 {
   "name": "Mist",
-  "version": "0.4.0",
+  "version": "0.5.2",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
@@ -12,6 +12,7 @@
     "i18next": "^1.10.6",
     "log-rotate": "^0.2.7",
     "minimongo-standalone": "0.0.9",
+    "ntp-client": "^0.5.3",
     "numeral": "^1.5.3",
     "solc": "^0.2.1-1",
     "underscore": "^1.8.3",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "del": "^1.2.1",
+    "easy-zip": "0.0.4",
     "electron-packager": "^5.2.1",
     "gulp": "^3.9.0",
     "gulp-jszip": "^0.1.2",

@@ -2,12 +2,13 @@ global._ = require('underscore');
 const fs = require('fs');
 const electron = require('electron');
 const app = require('app');  // Module to control application life.
-const appMenu = require('./modules/menuItems');
 const BrowserWindow = require('browser-window');  // Module to create native browser window.
 const i18n = require('./modules/i18n.js');
 const Minimongo = require('./modules/minimongoDb.js');
 const syncMinimongo = require('./modules/syncMinimongo.js');
 const ipc = electron.ipcMain;
+const dialog = require('dialog');
+const packageJson = require('./package.json');
 
 
 // GLOBAL Variables
@@ -17,7 +18,17 @@ global.path = {
     USERDATA: app.getPath('userData') // Application Aupport/Mist
 };
 
+global.appName = 'Mist';
+
+global.production = false;
+global.mode = 'mist';
+
+global.version = packageJson.version;
+global.license = packageJson.license;
+
+
 require('./modules/ipcCommunicator.js');
+const appMenu = require('./modules/menuItems');
 const ipcProviderBackend = require('./modules/ipc/ipcProviderBackend.js');
 const NodeConnector = require('./modules/ipc/nodeConnector.js');
 const popupWindow = require('./modules/popupWindow.js');
@@ -25,10 +36,6 @@ const ethereumNodes = require('./modules/ethereumNodes.js');
 const getIpcPath = require('./modules/ipc/getIpcPath.js');
 var ipcPath = getIpcPath();
 
-global.appName = 'Mist';
-
-global.production = false;
-global.mode = 'mist';
 
 global.mainWindow = null;
 global.windows = {};
@@ -154,6 +161,21 @@ app.on('before-quit', function(event){
 //     app.commandLine.appendSwitch('ignore-cpu-blacklist');
 // }
 
+var appStartWindow;
+var nodeType = 'geth';
+var logFunction = function(data) {
+    data = data.toString().replace(/[\r\n]+/,'');
+    console.log('NODE LOG:', data);
+
+    if(~data.indexOf('Block synchronisation started') && global.nodes[nodeType]) {
+        global.nodes[nodeType].stdout.removeListener('data', logFunction);
+        global.nodes[nodeType].stderr.removeListener('data', logFunction);
+    }
+
+    // show line if its not empty or "------"
+    if(appStartWindow && !/^\-*$/.test(data))
+        appStartWindow.webContents.send('startScreenText', 'logText', data.replace(/^.*[0-9]\]/,''));
+};
 
 // This method will be called when Electron has done everything
 // initialization and ready for creating browser windows.
@@ -190,7 +212,7 @@ app.on('ready', function() {
             title: global.appName,
             show: false,
             width: 1024 + 208,
-            height: 700,
+            height: 720,
             icon: global.icon,
             titleBarStyle: 'hidden-inset', //hidden-inset: more space
             backgroundColor: '#D2D2D2',
@@ -216,8 +238,8 @@ app.on('ready', function() {
         global.mainWindow = new BrowserWindow({
             title: global.appName,
             show: false,
-            width: 1024,
-            height: 680,
+            width: 1100,
+            height: 720,
             icon: global.icon,
             titleBarStyle: 'hidden-inset', //hidden-inset: more space
             backgroundColor: '#F6F6F6',
@@ -236,7 +258,7 @@ app.on('ready', function() {
         });
     }
 
-    var appStartWindow = new BrowserWindow({
+    appStartWindow = new BrowserWindow({
             title: global.appName,
             width: 400,
             height: 230,
@@ -254,6 +276,33 @@ app.on('ready', function() {
     appStartWindow.loadURL(global.interfacePopupsUrl + '#splashScreen_'+ global.mode);//'file://' + __dirname + '/interface/startScreen/'+ global.mode +'.html');
 
 
+    // check time sync
+    var ntpClient = require('ntp-client');
+    ntpClient.getNetworkTime("pool.ntp.org", 123, function(err, date) {
+        if(err) {
+            console.error('Couldn\'t get time from NTP time sync server.', err);
+            return;
+        }
+
+        var localTime = new Date();
+        var ntpTime = new Date(date);
+        var timeDiff = ntpTime.getTime() - localTime.getTime();
+
+        console.log('NTP time difference: ', timeDiff + 'ms');
+        if(timeDiff > 10000 || timeDiff < -10000) {
+            dialog.showMessageBox({
+                type: "error",
+                buttons: ['OK'],
+                message: global.i18n.t('mist.errors.timeSync.title'),
+                detail: global.i18n.t('mist.errors.timeSync.description', {ntpTime: ntpTime.toGMTString(), localTime: localTime.toGMTString()})
+            }, function(){
+                app.quit();
+            });
+        }
+    });
+
+
+
     appStartWindow.webContents.on('did-finish-load', function() {
 
 
@@ -261,7 +310,7 @@ app.on('ready', function() {
         const checkNodeSync = require('./modules/checkNodeSync.js');
         const net = require('net');
         const socket = new net.Socket();
-        var intervalId;
+        var intervalId = errorTimeout = null;
         var count = 0;
 
 
@@ -279,12 +328,11 @@ app.on('ready', function() {
                 count++;
 
                 // STARTING NODE
-                if(appStartWindow && appStartWindow.webContents)
+                if(appStartWindow)
                     appStartWindow.webContents.send('startScreenText', 'mist.startScreen.startingNode');
 
-                // read which node is used on this machine
-                var nodeType = 'geth';
 
+                // read which node is used on this machine
                 try {
                     nodeType = fs.readFileSync(global.path.USERDATA + '/node', {encoding: 'utf8'});
                 } catch(e){
@@ -296,43 +344,70 @@ app.on('ready', function() {
                 console.log('Node type: ', nodeType);
                 console.log('Network: ', global.network);
 
-                var node = ethereumNodes.startNode(nodeType, (global.network === 'test'), function(e){
-                    // TRY TO CONNECT EVER 500MS
+
+                // If nothing else happens, show an error message in 120 seconds, with the node log text
+                errorTimeout = setTimeout(function(){
+                    if(appStartWindow)
+                        appStartWindow.webContents.send('startScreenText', 'mist.startScreen.nodeConnectionTimeout', ipcPath);
+
+                    var log = '';
+                    try {
+                        log = fs.readFileSync(global.path.USERDATA + '/node.log', {encoding: 'utf8'});
+                        log = '...'+ log.slice(-1000);
+                    } catch(e){
+                        log = global.i18n.t('mist.errors.nodeStartup');
+                    };
+
+                    // add node type
+                    log = 'Node type: '+ nodeType + "\n" +
+                        'Network: '+ global.network + "\n" +
+                        'Platform: '+ process.platform +' (Architecure '+ process.arch +')'+"\n\n" +
+                        log;
+
+                    dialog.showMessageBox({
+                        type: "error",
+                        buttons: ['OK'],
+                        message: global.i18n.t('mist.errors.nodeConnect'),
+                        detail: log
+                    }, function(){
+                    });
+
+                }, 120 * 1000);
+
+
+                // -> START NODE
+                ethereumNodes.startNode(nodeType, (global.network === 'test'), function(e){
+                    // TRY TO CONNECT EVERY 500MS
                     if(!e) {
                         intervalId = setInterval(function(){
-                            socket.connect({path: ipcPath});
-                            count++;
-
-                            // timeout after 10 seconds
-                            if(count >= 60) {
-
-                                if(appStartWindow && appStartWindow.webContents)
-                                    appStartWindow.webContents.send('startScreenText', 'mist.startScreen.nodeConnectionTimeout', ipcPath);
-
-                                clearInterval(intervalId);
-
-                                clearSocket(socket, true);
-                            }
+                            if(socket)
+                                socket.connect({path: ipcPath});
                         }, 200);
 
+                        // log data to the splash screen
+                        if(global.nodes[nodeType]) {
+                            global.nodes[nodeType].stdout.on('data', logFunction);
+                            global.nodes[nodeType].stderr.on('data', logFunction);
+                        }
 
                     // NO Binary
                     } else {
 
-                        if(appStartWindow && appStartWindow.webContents) {
+                        if(appStartWindow) {
                             appStartWindow.webContents.send('startScreenText', 'mist.startScreen.nodeBinaryNotFound');
                         }
 
-                        clearInterval(intervalId);
-
+                        clearTimeout(errorTimeout);
                         clearSocket(socket, true);
                     }
                 });
+
             }
         });
         socket.on('connect', function(data){
             console.log('Geth connection FOUND');
-            if(appStartWindow && appStartWindow.webContents) {
+
+            if(appStartWindow) {
                 if(count === 0)
                     appStartWindow.webContents.send('startScreenText', 'mist.startScreen.runningNodeFound');
                 else
@@ -340,6 +415,8 @@ app.on('ready', function() {
             }
 
             clearInterval(intervalId);
+            clearTimeout(errorTimeout);
+
 
             // update menu, to show node switching possibilities
             appMenu();
@@ -348,7 +425,8 @@ app.on('ready', function() {
             // -> callback splash screen finished
             function(e){
 
-                appStartWindow.webContents.send('startScreenText', 'mist.startScreen.startedNode');
+                if(appStartWindow)
+                    appStartWindow.webContents.send('startScreenText', 'mist.startScreen.startedNode');
                 clearSocket(socket);
                 startMainWindow(appStartWindow);
 
@@ -423,6 +501,13 @@ Start the main window and all its processes
 @method startMainWindow
 */
 var startMainWindow = function(appStartWindow){
+
+    // remove the splash screen logger
+    if(global.nodes[nodeType]) {
+        global.nodes[nodeType].stdout.removeListener('data', logFunction);
+        global.nodes[nodeType].stderr.removeListener('data', logFunction);
+    }
+
 
     // and load the index.html of the app.
     console.log('Loading Interface at '+ global.interfaceAppUrl);

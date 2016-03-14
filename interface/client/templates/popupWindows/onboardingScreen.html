@@ -57,11 +57,11 @@
                 <div class="col col-6 col-deposit">
                     {{> dapp_identicon identity=(TemplateVar.get "newAccount")}}
                     <div class="you"> {{i18n "mist.popupWindows.onboarding.you"}}  </div>
-                    <input type="text" value="Etherbase" class="name" disabled>
+                    <input type="text" value="{{i18n 'mist.popupWindows.onboarding.etherbase'}}" class="name" disabled>
                     <h6 class="address"> {{TemplateVar.get "newAccount"}} </h6>
 
                     {{#unless TemplateVar.get "testnet"}}
-                        <a href="https://shapeshift.io/shifty.html?destination={{TemplateVar.get "newAccount"}}&amp;output=ETH&amp;apiKey=ef8312d8c9b9dda64fb852e8683eac6c33123f8743ff11383fb3bab29a364c01c27343fced4e628db8d5d66d763565763f8699c0fc903ec23db31cb908a944c8&amp;amount=1" class="button dapp-block-button dapp-small shapeshift" target="_popup"> {{i18n "mist.popupWindows.onboarding.depositBitcoin"}}  </a>
+                        <a href="https://shapeshift.io/shifty.html?destination={{newAccountLowerCase}}&amp;output=ETH&amp;apiKey=ef8312d8c9b9dda64fb852e8683eac6c33123f8743ff11383fb3bab29a364c01c27343fced4e628db8d5d66d763565763f8699c0fc903ec23db31cb908a944c8&amp;amount=1" class="button dapp-block-button dapp-small shapeshift" target="_popup"> {{i18n "mist.popupWindows.onboarding.depositBitcoin"}}  </a>
                     {{/unless}}
                 </div>
                 <div class="col col-12 footer-buttons">
@@ -74,7 +74,7 @@
                 <h1> {{i18n "mist.popupWindows.onboarding.learnIt"}} </h1>
                 <div class="col col-6 col-left">
                     {{{i18n "mist.popupWindows.onboarding.tutorial1Description"}}}
-                    <p><a href="https://blog.ethereum.org/2015/12/03/how-to-build-your-own-cryptocurrency/" class="button" target="_blank">{{i18n "mist.popupWindows.onboarding.buttons.learnReceipt"}}</a></p>
+                    <p><a href="https://www.ethereum.org/token" class="button" target="_blank">{{i18n "mist.popupWindows.onboarding.buttons.learnReceipt"}}</a></p>
                 </div>
                 <div class="col col-6 tutorial-token"></div>
                 <div class="col col-12 footer-buttons">
@@ -100,7 +100,7 @@
                 <h1> {{i18n "mist.popupWindows.onboarding.learnIt"}} </h1>
                 <div class="col col-6 col-left">
                     {{{i18n "mist.popupWindows.onboarding.tutorial3Description"}}}
-                    <p><a href="https://blog.ethereum.org/2015/12/04/ethereum-in-practice-part-2-how-to-build-a-better-democracy-in-under-a-100-lines-of-code/" class="button" target="_blank">{{i18n "mist.popupWindows.onboarding.buttons.learnReceipt"}}</a></p>
+                    <p><a href="https://www.ethereum.org/dao" class="button" target="_blank">{{i18n "mist.popupWindows.onboarding.buttons.learnReceipt"}}</a></p>
                 </div>
                 <div class="col col-6 tutorial-dao"></div>
                 <div class="col col-12 footer-buttons">
@@ -136,10 +136,14 @@
     {{#if TemplateVar.get "filePath"}}
         <div class="col col-6">
             {{#if TemplateVar.get "importing"}}
+                <span class="dapp-identicon dapp-icon-loading"></span>
                 <h2 style="display: block; text-align: center;">{{i18n "mist.popupWindows.onboarding.importing"}}</h2>
             {{else}}
                 <form action="about:blank" target="dapp-form-helper-iframe">
-                    <input type="password" placeholder="{{i18n 'mist.popupWindows.requestAccount.enterPassword'}}" class="password">
+                    <input type="{{showPassword}}" placeholder="{{i18n 'mist.popupWindows.requestAccount.enterPassword'}}" class="password">
+                    <br><br>
+                    <input type="checkbox" id="show-password" name="elements_input_bool" class="abi-input">
+                    <label for="show-password">{{i18n "mist.popupWindows.onboarding.buttons.showPassword"}}</label>
                     <br><br>
                     <button type="submit" style="margin-left: 15px;">{{i18n "mist.popupWindows.onboarding.buttons.importAccount"}}</button>
                 </form>
@@ -159,6 +163,7 @@
         </div>
         <div class="col col-6">
             {{#if TemplateVar.get "creatingPassword"}}
+                <span class="dapp-identicon dapp-icon-loading"></span>
                 <h2 style="display: block; text-align: center;">{{i18n "mist.popupWindows.onboarding.creating"}}</h2>
             {{else}}
                 <input type="password" placeholder="{{i18n 'mist.popupWindows.requestAccount.enterPassword'}}" class="password">

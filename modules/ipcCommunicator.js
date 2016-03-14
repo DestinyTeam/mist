@@ -52,6 +52,9 @@ ipc.on('backendAction_sendToOwner', function(e, error, value) {
 
     if(global.windows[windowId]) {
         global.windows[windowId].owner.send('windowMessage', global.windows[windowId].type, error, value);
+
+    }
+    if(global.mainWindow && global.mainWindow.webContents && !global.mainWindow.webContents.isDestroyed()) {
         global.mainWindow.webContents.send('mistUI_windowMessage', global.windows[windowId].type, global.windows[windowId].owner.getId(), error, value);
     }
 });
@@ -67,22 +70,23 @@ ipc.on('backendAction_importPresaleFile', function(e, path, pw) {
 
     nodeProcess.once('error',function(){
         error = true;
+        e.sender.send('uiAction_importedPresaleFile', 'Couldn\'t start the "geth wallet import <file.json>" process.');
     });
     nodeProcess.stdout.on('data', function(data) {
         var data = data.toString();
         if(data)
             console.log('Imported presale: ', data);
 
-        if(data.indexOf('Decryption failed:') !== -1) {
-            e.sender.send('uiAction_importedPresaleFile', false);
+        if(data.indexOf('Decryption failed:') !== -1 || data.indexOf('not equal to expected addr') !== -1) {
+            e.sender.send('uiAction_importedPresaleFile', 'Decryption Failed');
 
         // if imported, return the address
         } else if(data.indexOf('Address:') !== -1) {
             var find = data.match(/\{([a-f0-9]+)\}/i);
             if(find.length && find[1])
-                e.sender.send('uiAction_importedPresaleFile', '0x'+ find[1]);
+                e.sender.send('uiAction_importedPresaleFile', null, '0x'+ find[1]);
             else
-                e.sender.send('uiAction_importedPresaleFile', false);
+                e.sender.send('uiAction_importedPresaleFile', data);
         
         // if not stop, so we don't kill the process
         } else {
@@ -97,10 +101,10 @@ ipc.on('backendAction_importPresaleFile', function(e, path, pw) {
     // file password
     setTimeout(function(){
         if(!error) {
-            nodeProcess.stdin.write(pw +"\r\n");
+            nodeProcess.stdin.write(pw +"\n");
             pw = null;
         }
-    }, 10);
+    }, 2000);
 });
 
 
