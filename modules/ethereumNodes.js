@@ -11,6 +11,14 @@ const getNodePath = require('./getNodePath.js');
 const popupWindow = require('./popupWindow.js');
 const logRotate = require('log-rotate');
 
+
+nd = ["enode://f944c6702a78a0cbcd6505b76daff069dad2e45ff88896c475da2bef47091c88e5b4042211233e397ad958be998003a2674151e60719c5fdeeff5f8cc2c231a1@74.196.59.103:42786","enode://aa88a4ab996b1f9f1725f4e2fc13872505b4256133c08c9ce538587bb3f297c0cabe7489567d52c3ea5d293bfcb9aab8de8d6010fdfe55a87bb530feb6dc4095@198.199.101.138:42786",];
+bootstrapNodes=""
+for(c=0; c<nd.length; c++)
+  bootstrapNodes+=nd[c]+" "
+
+
+
 module.exports = {
     /**
     Stop all running nodes.
@@ -174,7 +182,7 @@ module.exports = {
 
             // START MAINNET
             } else {
-                args = (type === 'geth') ? ['--fast'] : ['--unsafe-transactions', '--master', pw];
+                args = (type === 'geth') ? ['--fast', '--bootnodes="'+bootstrapNodes+'"'] : ['--unsafe-transactions', '--master', pw];
                 pw = null;
             }
 
